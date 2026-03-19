@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import os
 
 private let logger = Logger(subsystem: "com.hush.app", category: "AppDelegate")
@@ -7,11 +8,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var statusMenuItem: NSMenuItem!
     private var shortcutMenuItem: NSMenuItem!
+    private var accessibilityMenuItem: NSMenuItem!
+    private var microphoneMenuItem: NSMenuItem!
 
     private let recorder = AudioRecorder()
     private let transcriptionService = TranscriptionService()
     private let hotkeyListener = HotkeyListener()
     private let settings = SettingsManager.shared
+
+    private var permissionTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         SingleInstanceGuard.ensureSingle()
@@ -19,6 +24,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             await checkPermissionsAndStart()
+        }
+
+        // Periodically refresh permission status in menu
+        permissionTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            self?.updatePermissionStatus()
         }
     }
 
@@ -36,6 +46,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenuItem = NSMenuItem(title: "Status: Starting...", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
+
+        accessibilityMenuItem = NSMenuItem(title: "Accessibility: checking...", action: nil, keyEquivalent: "")
+        accessibilityMenuItem.isEnabled = false
+        menu.addItem(accessibilityMenuItem)
+
+        microphoneMenuItem = NSMenuItem(title: "Microphone: checking...", action: nil, keyEquivalent: "")
+        microphoneMenuItem.isEnabled = false
+        menu.addItem(microphoneMenuItem)
 
         menu.addItem(.separator())
 
@@ -69,24 +87,73 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
-    // MARK: - Permissions & Startup
+    // MARK: - Permissions
+
+    private func updatePermissionStatus() {
+        let accessibility = AXIsProcessTrusted()
+        let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        let micGranted = micStatus == .authorized
+
+        DispatchQueue.main.async {
+            if accessibility {
+                self.accessibilityMenuItem.title = "Accessibility: ✓ Granted"
+                self.accessibilityMenuItem.action = nil
+                self.accessibilityMenuItem.isEnabled = false
+            } else {
+                self.accessibilityMenuItem.title = "Accessibility: ✗ Not Granted → Click to fix"
+                self.accessibilityMenuItem.action = #selector(self.openAccessibilitySettings)
+                self.accessibilityMenuItem.target = self
+                self.accessibilityMenuItem.isEnabled = true
+            }
+
+            if micGranted {
+                self.microphoneMenuItem.title = "Microphone: ✓ Granted"
+                self.microphoneMenuItem.action = nil
+                self.microphoneMenuItem.isEnabled = false
+            } else {
+                self.microphoneMenuItem.title = "Microphone: ✗ Not Granted → Click to fix"
+                self.microphoneMenuItem.action = #selector(self.openMicrophoneSettings)
+                self.microphoneMenuItem.target = self
+                self.microphoneMenuItem.isEnabled = true
+            }
+        }
+    }
+
+    private var retryTimer: Timer?
+    private var hasStarted = false
+
+    private func startPermissionRetry() {
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self, !self.hasStarted else { return }
+            self.updatePermissionStatus()
+            if AXIsProcessTrusted() {
+                self.retryTimer?.invalidate()
+                self.retryTimer = nil
+                Task { @MainActor in
+                    await self.finishStartup()
+                }
+            }
+        }
+    }
 
     @MainActor
-    private func checkPermissionsAndStart() async {
-        if !PermissionChecker.checkAccessibility() {
-            setStatus("Needs Accessibility")
-            PermissionChecker.promptAccessibility()
-            return
-        }
+    private func finishStartup() async {
+        guard !hasStarted else { return }
+        NSLog("[Hush] Requesting mic access...")
+        let micGranted = await PermissionChecker.requestMicrophoneAccess()
+        NSLog("[Hush] Mic access: %d", micGranted ? 1 : 0)
+        updatePermissionStatus()
 
-        guard await PermissionChecker.requestMicrophoneAccess() else {
-            setStatus("Needs Microphone")
-            return
+        NSLog("[Hush] Accessibility: %d", AXIsProcessTrusted() ? 1 : 0)
+        NSLog("[Hush] Starting hotkey listener...")
+        hotkeyListener.onPress = { [weak self] in
+            NSLog("[Hush] >>> HOTKEY PRESSED — recording")
+            self?.hotkeyPressed()
         }
-
-        logger.info("Starting hotkey listener...")
-        hotkeyListener.onPress = { [weak self] in self?.hotkeyPressed() }
-        hotkeyListener.onRelease = { [weak self] in self?.hotkeyReleased() }
+        hotkeyListener.onRelease = { [weak self] in
+            NSLog("[Hush] >>> HOTKEY RELEASED — transcribing")
+            self?.hotkeyReleased()
+        }
         hotkeyListener.configure(
             modifiers: settings.hotkeyModifiers,
             key: settings.hotkeyKey
@@ -100,9 +167,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await self.transcriptionService.loadModel()
             await MainActor.run {
                 self.setStatus("Ready")
-                logger.info("Hush is ready")
+                self.hasStarted = true
+                NSLog("[Hush] Ready! Press %@ to record.", self.settings.hotkeyDisplayString)
             }
         }
+    }
+
+    @objc private func openAccessibilitySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc private func openMicrophoneSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    // MARK: - Startup
+
+    @MainActor
+    private func checkPermissionsAndStart() async {
+        let axTrusted = AXIsProcessTrusted()
+        NSLog("[Hush] checkPermissionsAndStart: AXIsProcessTrusted = %d", axTrusted ? 1 : 0)
+        updatePermissionStatus()
+
+        if !axTrusted {
+            NSLog("[Hush] Accessibility NOT granted — waiting for user to fix via menu")
+            setStatus("Needs Accessibility — click menu to fix")
+            startPermissionRetry()
+            return
+        }
+
+        NSLog("[Hush] Accessibility granted — proceeding to finishStartup")
+        await finishStartup()
     }
 
     // MARK: - Hotkey Callbacks

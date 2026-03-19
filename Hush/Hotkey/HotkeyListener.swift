@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import os
 
 private let logger = Logger(subsystem: "com.hush.app", category: "HotkeyListener")
@@ -49,6 +50,7 @@ final class HotkeyListener {
             },
             userInfo: unmanagedSelf.toOpaque()
         ) else {
+            NSLog("[Hush] FAILED to create event tap — Accessibility not granted for this app!")
             logger.error("Failed to create event tap — check Accessibility permissions")
             return
         }
@@ -57,7 +59,7 @@ final class HotkeyListener {
         let source = CFMachPortCreateRunLoopSource(nil, eventTap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: true)
-        logger.info("Event tap started on main run loop")
+        NSLog("[Hush] Event tap created and started successfully")
     }
 
     func stop() {

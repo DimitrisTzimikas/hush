@@ -47,3 +47,5 @@ targets:
       - Accelerate.framework
     entitlements:
       path: Hush/Resources/Hush.entitlements
+      properties:
+        com.apple.security.device.audio-input: true

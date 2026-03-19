@@ -21,10 +21,12 @@
 		A826AAED70FD11AA8715C52F /* AudioBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5A5BFF9BA9FDA30F37E532 /* AudioBuffer.swift */; };
 		D1CD6BE94F568B365653C736 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2B1C8F5C8CEA77F362C19F /* KeyCodes.swift */; };
 		F2832AB31F3DDDA694927D39 /* PermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99EA9353A86F6FCE38AA9F9C /* PermissionChecker.swift */; };
+		F847FA3466370565461A9E1E /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 3DCB295F1FBBBCB6066DEFCB /* AppIcon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1D1B08BB3FA88A4437C63DB5 /* HushApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HushApp.swift; sourceTree = "<group>"; };
+		3DCB295F1FBBBCB6066DEFCB /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		5A2B1C8F5C8CEA77F362C19F /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		5AD8093354FF0755E941041F /* TranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionService.swift; sourceTree = "<group>"; };
 		664D0852F7C4BB53CCD3F928 /* Hush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hush.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -118,6 +120,7 @@
 		91616CA479E11816B80830A2 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				3DCB295F1FBBBCB6066DEFCB /* AppIcon.icns */,
 				F8476ACD07EB813631B22369 /* Hush.entitlements */,
 				68273CA1C0B9283A8EDA336F /* Info.plist */,
 			);
@@ -165,6 +168,7 @@
 			buildConfigurationList = 177968F7A9DE2E587E4673AC /* Build configuration list for PBXNativeTarget "Hush" */;
 			buildPhases = (
 				3B5BE0B8938861B0F0795209 /* Sources */,
+				05B466E4A94D9C58BE3EBFF5 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -206,6 +210,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		05B466E4A94D9C58BE3EBFF5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F847FA3466370565461A9E1E /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		3B5BE0B8938861B0F0795209 /* Sources */ = {
