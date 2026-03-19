@@ -6,6 +6,7 @@ class Transcriber:
     def __init__(self, model_name="base"):
         self._model = None
         self._model_name = model_name
+        self.language = None  # None = auto-detect
 
     def load_model(self):
         self._model = whisper.load_model(self._model_name)
@@ -15,8 +16,9 @@ class Transcriber:
             self.load_model()
         if len(audio) == 0:
             return ""
-        # Whisper expects float32 audio at 16kHz
-        # Pad or trim to 30 seconds as whisper expects
-        result = self._model.transcribe(audio, fp16=False)
+        opts = {"fp16": False}
+        if self.language:
+            opts["language"] = self.language
+        result = self._model.transcribe(audio, **opts)
         text = result["text"].strip()
         return text
