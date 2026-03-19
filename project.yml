@@ -1,0 +1,49 @@
+name: Hush
+options:
+  bundleIdPrefix: com.hush
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  minimumXcodeGenVersion: "2.30"
+
+targets:
+  Hush:
+    type: application
+    platform: macOS
+    sources:
+      - Hush
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hush.app
+        PRODUCT_NAME: Hush
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_OBJC_BRIDGING_HEADER: Hush/Bridging/Hush-Bridging-Header.h
+        INFOPLIST_FILE: Hush/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Hush/Resources/Hush.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/whisper.cpp/include"
+          - "$(SRCROOT)/whisper.cpp/ggml/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/whisper.cpp/build/src"
+          - "$(SRCROOT)/whisper.cpp/build/ggml/src"
+          - "$(SRCROOT)/whisper.cpp/build/ggml/src/ggml-blas"
+        OTHER_LDFLAGS:
+          - "-lc++"
+          - "-lwhisper"
+          - "-lggml"
+          - "-lggml-base"
+          - "-lggml-cpu"
+          - "-lggml-blas"
+          - "-framework Accelerate"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+      configs:
+        Release:
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+    dependencies: []
+    frameworks:
+      - Accelerate.framework
+    entitlements:
+      path: Hush/Resources/Hush.entitlements

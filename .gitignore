@@ -1,1 +1,10 @@
-hush/__pycache__/
+__pycache__/
+*.pyc
+xcuserdata/
+*.xcworkspace
+DerivedData/
+build/
+whisper.cpp/build/
+.DS_Store
+*.bin
+.vscode/
